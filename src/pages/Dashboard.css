@@ -1,0 +1,123 @@
+.dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a, #111827, #1e1b4b);
+  color: white;
+  padding-bottom: 50px;
+}
+
+.dashboard-nav {
+  height: 75px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 50px;
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-nav h1 {
+  font-size: 26px;
+  margin: 0;
+}
+
+.logout-btn {
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dashboard-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 60px 30px;
+}
+
+.welcome-section {
+  margin-bottom: 45px;
+}
+
+.welcome-section h2 {
+  font-size: 38px;
+  margin-bottom: 12px;
+}
+
+.welcome-section p {
+  color: #aeb8c8;
+  font-size: 18px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+
+.feature-card {
+  padding: 30px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  transition: 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.feature-icon {
+  font-size: 35px;
+  margin-bottom: 15px;
+}
+
+.feature-card h3 {
+  font-size: 23px;
+  margin-bottom: 12px;
+}
+
+.feature-card p {
+  color: #b8c1d1;
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+
+.feature-btn {
+  padding: 11px 18px;
+  border: none;
+  border-radius: 9px;
+  background: #6366f1;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.feature-btn:hover {
+  background: #4f46e5;
+}
+
+@media (max-width: 800px) {
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-nav {
+    padding: 0 20px;
+  }
+
+  .dashboard-content {
+    padding: 40px 20px;
+  }
+
+  .welcome-section h2 {
+    font-size: 30px;
+  }
+}
