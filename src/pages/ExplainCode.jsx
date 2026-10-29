@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ExplainCode.css";
+import { API_BASE_URL } from "../api";
 
 function ExplainCode() {
   const navigate = useNavigate();
@@ -22,7 +24,7 @@ function ExplainCode() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/ai/explain",
+        `${API_BASE_URL}/api/ai/explain`,
         {
           method: "POST",
           headers: {
@@ -32,6 +34,15 @@ function ExplainCode() {
         }
       );
 
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.toLowerCase().includes("application/json")) {
+        throw new Error(
+          `The backend returned an unexpected response (HTTP ${response.status}). Check the API URL, explanation route, and backend logs.`
+        );
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -40,26 +51,61 @@ function ExplainCode() {
         );
       }
 
+      if (
+        typeof data.explanation !== "string" ||
+        !data.explanation.trim()
+      ) {
+        throw new Error(
+          "The AI did not return an explanation. Please try again."
+        );
+      }
+
+      // Display the successful explanation.
       setExplanation(data.explanation);
 
-const user = JSON.parse(localStorage.getItem("user"));
+      // Save history separately so history errors don't
+      // cancel an otherwise successful explanation.
+      try {
+        const storedUser = localStorage.getItem("user");
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const userId = user?._id || user?.id;
 
-if (user?._id) {
-  await fetch("http://localhost:5000/api/history", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      userId: user._id,
-      type: "Explain Code",
-      code,
-      result: data.explanation,
-    }),
-  });
-}
+        if (userId) {
+          const historyResponse = await fetch(
+            `${API_BASE_URL}/api/history`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId,
+                type: "Explain Code",
+                code,
+                result: data.explanation,
+              }),
+            }
+          );
+
+          if (!historyResponse.ok) {
+            console.warn(
+              "Explanation succeeded, but saving history failed:",
+              historyResponse.status
+            );
+          }
+        }
+      } catch (historyError) {
+        console.warn(
+          "Explanation succeeded, but history could not be saved:",
+          historyError.message
+        );
+      }
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      console.error("Explain Code error:", err);
+      setError(
+        err.message ||
+        "Unable to explain the code. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -73,10 +119,7 @@ if (user?._id) {
 
   return (
     <div className="explain-page">
-
-      {/* Navbar */}
       <nav className="explain-nav">
-
         <div
           className="explain-logo"
           onClick={() => navigate("/dashboard")}
@@ -91,37 +134,25 @@ if (user?._id) {
         >
           ← Dashboard
         </button>
-
       </nav>
 
       <main className="explain-container">
-
-        {/* Header */}
         <section className="explain-header">
-
-          <div className="explain-icon">
-            💡
-          </div>
+          <div className="explain-icon">💡</div>
 
           <div>
             <h2>Explain Code</h2>
-
             <p>
               Understand complex code with simple,
               beginner-friendly explanations powered by AI.
             </p>
           </div>
-
         </section>
 
-        {/* Input */}
         <section className="explain-card">
-
           <div className="card-header">
-
             <div>
               <h3>📝 Your Code</h3>
-
               <span>
                 Paste the code you want to understand
               </span>
@@ -134,7 +165,6 @@ if (user?._id) {
             >
               Clear
             </button>
-
           </div>
 
           <textarea
@@ -151,7 +181,6 @@ function add(a, b) {
           />
 
           <div className="explain-actions">
-
             <span className="code-status">
               {code.length} characters
             </span>
@@ -167,90 +196,62 @@ function add(a, b) {
                   Explaining...
                 </>
               ) : (
-                <>
-                  💡 Explain Code
-                </>
+                <>💡 Explain Code</>
               )}
             </button>
-
           </div>
-
         </section>
 
-        {/* Error */}
         {error && (
-          <div className="error-message">
+          <div className="error-message" role="alert">
             ⚠️ {error}
           </div>
         )}
 
-        {/* Explanation */}
         {explanation && (
           <section className="explanation-card">
-
             <div className="result-header">
-
               <div className="ai-title">
-
-                <div className="ai-avatar">
-                  🤖
-                </div>
+                <div className="ai-avatar">🤖</div>
 
                 <div>
                   <h3>AI Explanation</h3>
-
                   <span>
                     Simple explanation generated by CodeMentor AI
                   </span>
                 </div>
-
               </div>
 
               <span className="success-badge">
                 ✓ Completed
               </span>
-
             </div>
 
             <div className="explanation-result">
               {explanation}
             </div>
-
           </section>
         )}
 
-        {/* Info */}
         {!explanation && !loading && (
-
           <section className="info-card">
-
-            <div className="info-icon">
-              💡
-            </div>
+            <div className="info-icon">💡</div>
 
             <div>
-
               <h3>What can CodeMentor AI explain?</h3>
 
               <div className="check-list">
-
                 <span>✓ Code structure</span>
                 <span>✓ Functions and methods</span>
                 <span>✓ Variables</span>
                 <span>✓ Program flow</span>
                 <span>✓ Complex logic</span>
                 <span>✓ Beginner-friendly concepts</span>
-
               </div>
-
             </div>
-
           </section>
-
         )}
-
       </main>
-
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./DebugCode.css";
+import { API_BASE_URL } from "../api";
 
 function DebugCode() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ function DebugCode() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/ai/debug",
+        `${API_BASE_URL}/api/ai/debug`,
         {
           method: "POST",
           headers: {
@@ -33,6 +34,15 @@ function DebugCode() {
         }
       );
 
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.toLowerCase().includes("application/json")) {
+        throw new Error(
+          `The backend returned an unexpected response (HTTP ${response.status}). Check the API URL, debug route, and backend logs.`
+        );
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -41,26 +51,57 @@ function DebugCode() {
         );
       }
 
+      if (typeof data.debug !== "string" || !data.debug.trim()) {
+        throw new Error(
+          "The AI did not return a debugging result. Please try again."
+        );
+      }
+
+      // Display the successful debugging result.
       setDebug(data.debug);
 
-const user = JSON.parse(localStorage.getItem("user"));
+      // Save history separately so a history failure
+      // does not cancel the debugging result.
+      try {
+        const storedUser = localStorage.getItem("user");
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const userId = user?._id || user?.id;
 
-if (user?._id) {
-  await fetch("http://localhost:5000/api/history", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      userId: user._id,
-      type: "Debug Code",
-      code,
-      result: data.debug,
-    }),
-  });
-}
+        if (userId) {
+          const historyResponse = await fetch(
+            `${API_BASE_URL}/api/history`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId,
+                type: "Debug Code",
+                code,
+                result: data.debug,
+              }),
+            }
+          );
+
+          if (!historyResponse.ok) {
+            console.warn(
+              "Debugging succeeded, but saving history failed:",
+              historyResponse.status
+            );
+          }
+        }
+      } catch (historyError) {
+        console.warn(
+          "Debugging succeeded, but history could not be saved:",
+          historyError.message
+        );
+      }
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      console.error("Debug Code error:", err);
+      setError(
+        err.message || "Unable to debug the code. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -74,10 +115,7 @@ if (user?._id) {
 
   return (
     <div className="debug-page">
-
-      {/* Navbar */}
       <nav className="debug-nav">
-
         <div
           className="debug-logo"
           onClick={() => navigate("/dashboard")}
@@ -92,37 +130,25 @@ if (user?._id) {
         >
           ← Dashboard
         </button>
-
       </nav>
 
       <main className="debug-container">
-
-        {/* Header */}
         <section className="debug-header">
-
-          <div className="debug-icon">
-            🐞
-          </div>
+          <div className="debug-icon">🐞</div>
 
           <div>
             <h2>Debug Code</h2>
-
             <p>
               Find errors, understand why they happen,
               and get AI-powered fixes for your code.
             </p>
           </div>
-
         </section>
 
-        {/* Code Input */}
         <section className="debug-card">
-
           <div className="card-header">
-
             <div>
               <h3>💻 Your Code</h3>
-
               <span>
                 Paste the code you want CodeMentor AI to debug
               </span>
@@ -135,7 +161,6 @@ if (user?._id) {
             >
               Clear
             </button>
-
           </div>
 
           <textarea
@@ -154,7 +179,6 @@ console.log(divide(10, 2));`}
           />
 
           <div className="debug-actions">
-
             <span className="code-status">
               {code.length} characters
             </span>
@@ -170,90 +194,60 @@ console.log(divide(10, 2));`}
                   Debugging...
                 </>
               ) : (
-                <>
-                  🐞 Debug Code
-                </>
+                <>🐞 Debug Code</>
               )}
             </button>
-
           </div>
-
         </section>
 
-        {/* Error */}
         {error && (
-          <div className="error-message">
+          <div className="error-message" role="alert">
             ⚠️ {error}
           </div>
         )}
 
-        {/* Result */}
         {debug && (
           <section className="debug-result-card">
-
             <div className="result-header">
-
               <div className="ai-title">
-
-                <div className="ai-avatar">
-                  🤖
-                </div>
+                <div className="ai-avatar">🤖</div>
 
                 <div>
                   <h3>AI Debug Result</h3>
-
                   <span>
                     Problems and solutions identified by CodeMentor AI
                   </span>
                 </div>
-
               </div>
 
               <span className="success-badge">
                 ✓ Completed
               </span>
-
             </div>
 
-            <pre className="debug-result">
-              {debug}
-            </pre>
-
+            <pre className="debug-result">{debug}</pre>
           </section>
         )}
 
-        {/* Info */}
         {!debug && !loading && (
-
           <section className="info-card">
-
-            <div className="info-icon">
-              🐞
-            </div>
+            <div className="info-icon">🐞</div>
 
             <div>
-
               <h3>What can CodeMentor AI debug?</h3>
 
               <div className="check-list">
-
                 <span>✓ Syntax errors</span>
                 <span>✓ Logical errors</span>
                 <span>✓ Runtime problems</span>
                 <span>✓ Incorrect variables</span>
                 <span>✓ Function problems</span>
                 <span>✓ Beginner coding mistakes</span>
-
               </div>
-
             </div>
-
           </section>
-
         )}
-
       </main>
-
     </div>
   );
 }

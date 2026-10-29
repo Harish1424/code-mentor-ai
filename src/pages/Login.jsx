@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Auth.css";
+import { API_BASE_URL } from "../api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,32 +18,42 @@ const Login = () => {
   const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    if (error) setError("");
+    const { name, value } = e.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setError("");
+    setSuccess("");
   };
 
   const validateForm = () => {
+    const email = formData.email.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) {
+
+    if (!email) {
       setError("Please enter your email address.");
       return false;
     }
-    if (!emailRegex.test(formData.email.trim())) {
+
+    if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
       return false;
     }
+
     if (!formData.password) {
       setError("Please enter your password.");
       return false;
     }
+
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
     setSuccess("");
 
@@ -50,37 +62,54 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email.trim(),
-          password: formData.password,
-        }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            password: formData.password,
+          }),
+        }
+      );
 
-      const data = await response.json().catch(() => ({}));
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.toLowerCase().includes("application/json")) {
+        throw new Error(
+          `The server returned an unexpected response (HTTP ${response.status}). Check the backend URL and deployment logs.`
+        );
+      }
+
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+        throw new Error(data.message || "Login failed.");
       }
+
+      if (!data.token || !data.user) {
+        throw new Error(
+          "The server response is missing login information. Please check the backend login API."
+        );
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       setSuccess("Login successful! Redirecting to dashboard...");
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
+      navigate("/dashboard");
     } catch (err) {
-      setError(err.message || "Login failed. Please check your credentials.");
+      console.error("Login error:", err);
+
+      setError(
+        err.message ||
+          "Login failed. Please check your credentials and try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -92,10 +121,11 @@ const Login = () => {
       <div className="glow glow-two"></div>
 
       <div className="auth-wrapper">
-        {/* LEFT SHOWCASE */}
+        {/* Left Showcase */}
         <div className="auth-showcase">
           <div className="brand">
             <div className="brand-icon">🤖</div>
+
             <div>
               <h1>Code Mentor AI</h1>
               <span>Intelligent Programming Assistant</span>
@@ -108,8 +138,9 @@ const Login = () => {
             </h2>
 
             <p className="showcase-description">
-              Accelerate your programming skills with real-time AI code reviews,
-              beginner-friendly explanations, automated debugging, and personalized learning roadmaps.
+              Accelerate your programming skills with real-time AI
+              code reviews, beginner-friendly explanations,
+              automated debugging, and personalized learning roadmaps.
             </p>
 
             <div className="code-window">
@@ -126,12 +157,16 @@ const Login = () => {
                   <span className="blue">mentor</span> ={" "}
                   <span className="green">CodeMentorAI</span>;
                 </p>
+
                 <p>
                   <span className="purple">await</span>{" "}
                   <span className="blue">mentor</span>.
                   <span className="purple">review</span>(yourCode);
                 </p>
-                <p className="comment">// Instant feedback. Zero friction.</p>
+
+                <p className="comment">
+                  // Instant feedback. Zero friction.
+                </p>
               </div>
             </div>
 
@@ -139,9 +174,11 @@ const Login = () => {
               <div>
                 <span>✓</span> AI Code Review
               </div>
+
               <div>
                 <span>✓</span> Code Explanation
               </div>
+
               <div>
                 <span>✓</span> Smart Debugging
               </div>
@@ -149,7 +186,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* RIGHT AUTH CARD */}
+        {/* Right Authentication Card */}
         <div className="auth-card">
           <div className="auth-header">
             <div className="welcome-icon">🔑</div>
@@ -170,11 +207,15 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} noValidate>
-            {/* EMAIL */}
+            {/* Email */}
             <div className="input-group">
-              <label htmlFor="login-email">Email Address</label>
+              <label htmlFor="login-email">
+                Email Address
+              </label>
+
               <div className="input-wrapper">
                 <span className="input-icon">✉</span>
+
                 <input
                   id="login-email"
                   type="email"
@@ -188,14 +229,17 @@ const Login = () => {
               </div>
             </div>
 
-            {/* PASSWORD */}
+            {/* Password */}
             <div className="input-group">
               <div className="label-row">
-                <label htmlFor="login-password">Password</label>
+                <label htmlFor="login-password">
+                  Password
+                </label>
               </div>
 
               <div className="input-wrapper">
                 <span className="input-icon">🔒</span>
+
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
@@ -210,15 +254,17 @@ const Login = () => {
                 <button
                   type="button"
                   className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((previous) => !previous)}
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
 
-            {/* SUBMIT BUTTON */}
+            {/* Submit */}
             <button
               type="submit"
               className="auth-submit"
@@ -248,7 +294,7 @@ const Login = () => {
           </p>
 
           <p className="secure-note">
-            🔒 Safe & secure local authentication with JWT.
+            🔒 Secure authentication with JWT.
           </p>
         </div>
       </div>

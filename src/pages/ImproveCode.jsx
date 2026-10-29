@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ImproveCode.css";
+import { API_BASE_URL } from "../api";
 
 function ImproveCode() {
   const navigate = useNavigate();
@@ -22,7 +24,7 @@ function ImproveCode() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/ai/improve",
+        `${API_BASE_URL}/api/ai/improve`,
         {
           method: "POST",
           headers: {
@@ -32,6 +34,15 @@ function ImproveCode() {
         }
       );
 
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (!contentType.toLowerCase().includes("application/json")) {
+        throw new Error(
+          `The backend returned an unexpected response (HTTP ${response.status}). Check the API URL, improve route, and backend logs.`
+        );
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -40,27 +51,61 @@ function ImproveCode() {
         );
       }
 
+      if (
+        typeof data.improvedCode !== "string" ||
+        !data.improvedCode.trim()
+      ) {
+        throw new Error(
+          "The AI did not return improved code. Please try again."
+        );
+      }
+
+      // Display the successful improvement.
       setImprovement(data.improvedCode);
 
-const user = JSON.parse(localStorage.getItem("user"));
+      // Save history separately so a history failure
+      // does not cancel the successful improvement.
+      try {
+        const storedUser = localStorage.getItem("user");
+        const user = storedUser ? JSON.parse(storedUser) : null;
+        const userId = user?._id || user?.id;
 
-if (user?._id) {
-  await fetch("http://localhost:5000/api/history", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      userId: user._id,
-      type: "Improve Code",
-      code,
-      result: data.improvedCode,
-    }),
-  });
-}
+        if (userId) {
+          const historyResponse = await fetch(
+            `${API_BASE_URL}/api/history`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId,
+                type: "Improve Code",
+                code,
+                result: data.improvedCode,
+              }),
+            }
+          );
 
+          if (!historyResponse.ok) {
+            console.warn(
+              "Improvement succeeded, but saving history failed:",
+              historyResponse.status
+            );
+          }
+        }
+      } catch (historyError) {
+        console.warn(
+          "Improvement succeeded, but history could not be saved:",
+          historyError.message
+        );
+      }
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      console.error("Improve Code error:", err);
+      setError(
+        err.message ||
+          "Unable to improve the code. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -97,7 +142,6 @@ if (user?._id) {
 
           <div>
             <h2>Improve Code</h2>
-
             <p>
               Make your code cleaner, more readable, and efficient
               with AI-powered suggestions.
@@ -109,7 +153,6 @@ if (user?._id) {
           <div className="card-header">
             <div>
               <h3>💻 Your Code</h3>
-
               <span>
                 Paste the code you want CodeMentor AI to improve
               </span>
@@ -156,16 +199,14 @@ console.log(calculateTotal(100, 5));`}
                   Improving...
                 </>
               ) : (
-                <>
-                  ✨ Improve Code
-                </>
+                <>✨ Improve Code</>
               )}
             </button>
           </div>
         </section>
 
         {error && (
-          <div className="error-message">
+          <div className="error-message" role="alert">
             ⚠️ {error}
           </div>
         )}
@@ -178,7 +219,6 @@ console.log(calculateTotal(100, 5));`}
 
                 <div>
                   <h3>AI Code Improvement</h3>
-
                   <span>
                     Improved code and suggestions from CodeMentor AI
                   </span>
